@@ -1,6 +1,6 @@
 {
   "name": "docker-mailserver-gui",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "[![Docker Pulls](https://img.shields.io/docker/pulls/dunajdev/docker-mailserver-gui)](https://hub.docker.com/r/dunajdev/docker-mailserver-gui)",
   "main": "index.js",
   "scripts": {
