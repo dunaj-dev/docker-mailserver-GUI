@@ -31,8 +31,8 @@ i18n
     },
 
     detection: {
-      order: ['cookie', 'localStorage', 'navigator'],
-      caches: ['localStorage', 'cookie'],
+      order: ['localStorage', 'navigator'],
+      caches: ['localStorage'],
     },
   });
 
