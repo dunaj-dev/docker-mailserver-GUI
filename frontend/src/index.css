@@ -9,9 +9,15 @@ body {
 }
 
 .sidebar {
-  min-height: calc(100vh - 56px);
   background-color: #343a40;
   padding-top: 20px;
+}
+
+/* The "min-width" comes from the "min-width" media attribute on "main-content" */
+@media (min-width: 768px) {
+  .sidebar {
+    min-height: calc(100vh - 56px);
+  }
 }
 
 /* Removed color and background styles as they are set inline in Sidebar.js */
