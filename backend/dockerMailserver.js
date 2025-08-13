@@ -92,7 +92,7 @@ async function getAccounts() {
     // Parse multiline output with regex to extract email and size information
     const accounts = [];
     const accountLineRegex =
-      /\* ([\w\-\.@]+) \( ([\w\~]+) \/ ([\w\~]+) \) \[(\d+)%\](.*)$/;
+      /\* ([\w\-\.@]+) \( ([\w\.\~]+) \/ ([\w\.\~]+) \) \[(\d+)%\](.*)$/;
 
     // Process each line individually
     const lines = stdout.split('\n').filter((line) => line.trim().length > 0);
