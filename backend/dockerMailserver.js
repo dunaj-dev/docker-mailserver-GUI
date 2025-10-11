@@ -23,6 +23,18 @@ function debugLog(message, data = null) {
 }
 
 /**
+ * Escapes a string for safe use in shell commands by wrapping it in single quotes
+ * and escaping any single quotes within the string
+ * @param {string} arg - Argument to escape
+ * @return {string} Escaped argument safe for shell execution
+ */
+function escapeShellArg(arg) {
+  // Replace single quotes with '\'' (end quote, escaped quote, start quote)
+  // Then wrap the entire string in single quotes
+  return "'" + arg.replace(/'/g, "'\\''") + "'";
+}
+
+/**
  * Executes a command in the docker-mailserver container
  * @param {string} command Command to execute
  * @return {Promise<string>} stdout from the command
@@ -143,7 +155,9 @@ async function getAccounts() {
 async function addAccount(email, password) {
   try {
     debugLog(`Adding new email account: ${email}`);
-    await execSetup(`email add ${email} ${password}`);
+    await execSetup(
+      `email add ${escapeShellArg(email)} ${escapeShellArg(password)}`
+    );
     debugLog(`Account created: ${email}`);
     return { success: true, email };
   } catch (error) {
@@ -157,7 +171,9 @@ async function addAccount(email, password) {
 async function updateAccountPassword(email, password) {
   try {
     debugLog(`Updating password for account: ${email}`);
-    await execSetup(`email update ${email} ${password}`);
+    await execSetup(
+      `email update ${escapeShellArg(email)} ${escapeShellArg(password)}`
+    );
     debugLog(`Password updated for account: ${email}`);
     return { success: true, email };
   } catch (error) {
@@ -171,7 +187,7 @@ async function updateAccountPassword(email, password) {
 async function deleteAccount(email) {
   try {
     debugLog(`Deleting email account: ${email}`);
-    await execSetup(`email del ${email}`);
+    await execSetup(`email del ${escapeShellArg(email)}`);
     debugLog(`Account deleted: ${email}`);
     return { success: true, email };
   } catch (error) {
@@ -229,7 +245,9 @@ async function getAliases() {
 async function addAlias(source, destination) {
   try {
     debugLog(`Adding new alias: ${source} -> ${destination}`);
-    await execSetup(`alias add ${source} ${destination}`);
+    await execSetup(
+      `alias add ${escapeShellArg(source)} ${escapeShellArg(destination)}`
+    );
     debugLog(`Alias created: ${source} -> ${destination}`);
     return { success: true, source, destination };
   } catch (error) {
@@ -243,7 +261,9 @@ async function addAlias(source, destination) {
 async function deleteAlias(source, destination) {
   try {
     debugLog(`Deleting alias: ${source} => ${destination}`);
-    await execSetup(`alias del ${source} ${destination}`);
+    await execSetup(
+      `alias del ${escapeShellArg(source)} ${escapeShellArg(destination)}`
+    );
     debugLog(`Alias deleted: ${source} => ${destination}`);
     return { success: true, source, destination };
   } catch (error) {
