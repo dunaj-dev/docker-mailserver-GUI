@@ -31,7 +31,7 @@ function debugLog(message, data = null) {
 function escapeShellArg(arg) {
   // Replace single quotes with '\'' (end quote, escaped quote, start quote)
   // Then wrap the entire string in single quotes
-  return "'" + arg.replace(/'/g, "'\\''") + "'";
+  return `'${arg.replace(/'/g, "'\\''")}'`;
 }
 
 /**
