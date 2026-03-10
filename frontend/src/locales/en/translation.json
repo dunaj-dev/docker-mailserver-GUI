@@ -117,6 +117,7 @@
     "generateMissingDkim": "Run setup config dkim",
     "dkimConfigured": "DKIM configuration command executed. Refresh if key generation takes a moment.",
     "copyDkim": "Copy DKIM",
+    "openDnsGuide": "DNS Guide",
     "copied": "Copied",
     "refresh": "Refresh",
     "noDomains": "No domains found yet.",

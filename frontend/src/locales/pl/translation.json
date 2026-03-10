@@ -115,6 +115,7 @@
     "generateMissingDkim": "Uruchom setup config dkim",
     "dkimConfigured": "Polecenie konfiguracji DKIM zostało uruchomione. Odśwież dane, jeśli generowanie kluczy potrwa chwilę.",
     "copyDkim": "Kopiuj DKIM",
+    "openDnsGuide": "Przewodnik DNS",
     "copied": "Skopiowano",
     "refresh": "Odśwież",
     "noDomains": "Nie znaleziono jeszcze żadnych domen.",
