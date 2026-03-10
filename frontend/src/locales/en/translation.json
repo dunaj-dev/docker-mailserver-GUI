@@ -9,6 +9,7 @@
     "dashboard": "Dashboard",
     "emailAccounts": "Email Accounts",
     "aliases": "Aliases",
+    "domains": "Domains",
     "settings": "Settings"
   },
   "dashboard": {
@@ -99,6 +100,33 @@
     "aboutDescription": "Docker Mailserver GUI is a graphical interface for managing your Docker Mailserver. The application allows easy management of email accounts, aliases, and monitoring server status.",
     "githubLink": "View on GitHub"
   },
+  "domains": {
+    "title": "Domain Overview",
+    "overview": "Domains and DNS Records",
+    "overviewInfo": "Use this page to copy DKIM records and configure SPF/DMARC per domain.",
+    "domain": "Domain",
+    "dkim": "DKIM",
+    "dmarc": "DMARC",
+    "spf": "SPF",
+    "configured": "Configured",
+    "notConfigured": "Missing",
+    "dkimRecord": "DKIM TXT Record",
+    "noDkimYet": "DKIM key not generated yet",
+    "noDkimHelp": "No DKIM key found for this domain. Run DKIM configuration to generate it.",
+    "generateDkim": "Generate DKIM",
+    "generateMissingDkim": "Run setup config dkim",
+    "dkimConfigured": "DKIM configuration command executed. Refresh if key generation takes a moment.",
+    "copyDkim": "Copy DKIM",
+    "copied": "Copied",
+    "refresh": "Refresh",
+    "noDomains": "No domains found yet.",
+    "dnsGuideCard": "DNS Setup Guide",
+    "spfHelp": "Create this TXT record at your root domain (@).",
+    "dmarcHelp": "Create this TXT record to monitor DMARC alignment and reporting.",
+    "dkimHelp": "Create this TXT record to publish the DKIM public key.",
+    "recordName": "Record name",
+    "recordType": "Type"
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",
@@ -114,7 +142,10 @@
       "updatePassword": "Error updating password",
       "fetchAliases": "Error fetching aliases",
       "addAlias": "Error adding alias",
-      "deleteAlias": "Error deleting alias"
+      "deleteAlias": "Error deleting alias",
+      "fetchDomains": "Error fetching domain overview",
+      "configureDkim": "Error running DKIM configuration",
+      "copyDkim": "Error copying DKIM record"
     }
   },
   "language": {

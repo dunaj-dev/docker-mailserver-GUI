@@ -97,4 +97,24 @@ export const deleteAlias = async (source, destination) => {
   }
 };
 
+export const getDomains = async () => {
+  try {
+    const response = await api.get('/domains');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching domains overview:', error);
+    throw error;
+  }
+};
+
+export const configureDkim = async () => {
+  try {
+    const response = await api.post('/domains/dkim');
+    return response.data;
+  } catch (error) {
+    console.error('Error configuring DKIM:', error);
+    throw error;
+  }
+};
+
 export default api;

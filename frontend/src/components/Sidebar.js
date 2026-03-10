@@ -31,6 +31,9 @@ const Sidebar = () => {
       <Nav.Link as={NavLink} to="/aliases" style={getNavLinkStyle}>
         <i className="bi bi-arrow-left-right me-2"></i> {t('sidebar.aliases')}
       </Nav.Link>
+      <Nav.Link as={NavLink} to="/domains" style={getNavLinkStyle}>
+        <i className="bi bi-globe2 me-2"></i> {t('sidebar.domains')}
+      </Nav.Link>
       <Nav.Link as={NavLink} to="/settings" style={getNavLinkStyle}>
         <i className="bi bi-gear-fill me-2"></i> {t('sidebar.settings')}
       </Nav.Link>

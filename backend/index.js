@@ -312,6 +312,50 @@ app.delete('/api/aliases/:source/:destination', async (req, res) => {
   }
 });
 
+// Endpoint for retrieving domains overview
+/**
+ * @swagger
+ * /api/domains:
+ *   get:
+ *     summary: Get domains overview
+ *     description: Retrieve all domains with DKIM/SPF/DMARC DNS guidance
+ *     responses:
+ *       200:
+ *         description: List of domains and DNS records
+ *       500:
+ *         description: Unable to retrieve domains overview
+ */
+app.get('/api/domains', async (req, res) => {
+  try {
+    const domains = await dockerMailserver.getDomainsOverview();
+    res.json(domains);
+  } catch (error) {
+    res.status(500).json({ error: 'Unable to retrieve domains overview' });
+  }
+});
+
+// Endpoint for generating DKIM keys
+/**
+ * @swagger
+ * /api/domains/dkim:
+ *   post:
+ *     summary: Configure DKIM
+ *     description: Run `setup config dkim` inside docker-mailserver container
+ *     responses:
+ *       200:
+ *         description: DKIM configuration command executed
+ *       500:
+ *         description: Unable to configure DKIM
+ */
+app.post('/api/domains/dkim', async (req, res) => {
+  try {
+    await dockerMailserver.configureDkim();
+    res.json({ message: 'DKIM configuration command executed successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Unable to configure DKIM' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
