@@ -404,7 +404,7 @@ async function updateAccountQuota(email, quota) {
   try {
     debugLog(`Updating quota for account: ${email} -> ${quota}`);
     await execSetup(
-      `email update ${escapeShellArg(email)} --quota ${escapeShellArg(quota)}`
+      `quota set ${escapeShellArg(email)} ${escapeShellArg(quota)}`
     );
     debugLog(`Quota updated for account: ${email}`);
     return { success: true, email, quota };

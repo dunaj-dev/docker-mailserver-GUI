@@ -243,6 +243,11 @@ app.put('/api/accounts/:email/quota', async (req, res) => {
     if (!quota) {
       return res.status(400).json({ error: 'Quota is required' });
     }
+    if (!/^\d+\s*[mMgG]$/.test(String(quota).trim())) {
+      return res
+        .status(400)
+        .json({ error: 'Quota must use MB or GB units, for example 500M or 2G' });
+    }
 
     await dockerMailserver.updateAccountQuota(email, quota);
     res.json({ message: 'Quota updated successfully', email, quota });
