@@ -120,6 +120,7 @@
     "refresh": "Odśwież",
     "noDomains": "Nie znaleziono jeszcze żadnych domen.",
     "dnsGuideCard": "Przewodnik Konfiguracji DNS",
+    "testingInfo": "DKIM, SPF i DMARC możesz łatwo przetestować narzędziami takimi jak",
     "spfHelp": "Utwórz ten rekord TXT w głównej domenie (@).",
     "dmarcHelp": "Utwórz ten rekord TXT do monitorowania zgodności DMARC i raportowania.",
     "dkimHelp": "Utwórz ten rekord TXT, aby opublikować klucz publiczny DKIM.",

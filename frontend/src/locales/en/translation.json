@@ -122,6 +122,7 @@
     "refresh": "Refresh",
     "noDomains": "No domains found yet.",
     "dnsGuideCard": "DNS Setup Guide",
+    "testingInfo": "You can easily test DKIM, SPF, and DMARC using tools like",
     "spfHelp": "Create this TXT record at your root domain (@).",
     "dmarcHelp": "Create this TXT record to monitor DMARC alignment and reporting.",
     "dkimHelp": "Create this TXT record to publish the DKIM public key.",

@@ -276,13 +276,27 @@ const Domains = () => {
                     <strong>{t('domains.recordType')}:</strong>{' '}
                     {selectedDomain.dkim.recordType}
                   </p>
-                  <code className="small text-break d-block">
+                  <code
+                    className="small d-block overflow-auto"
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
                     {selectedDomain.dkim.recordValue}
                   </code>
                 </>
               ) : (
                 <AlertMessage type="warning" message="domains.noDkimHelp" />
               )}
+
+              <p className="small text-muted mt-3 mb-0">
+                {t('domains.testingInfo')}{' '}
+                <a
+                  href="https://mailtested.com/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  mailtested.com
+                </a>
+              </p>
             </>
           )}
         </Modal.Body>
