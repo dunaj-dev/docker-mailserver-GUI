@@ -399,6 +399,22 @@ async function updateAccountPassword(email, password) {
   }
 }
 
+// Function to update an email account quota
+async function updateAccountQuota(email, quota) {
+  try {
+    debugLog(`Updating quota for account: ${email} -> ${quota}`);
+    await execSetup(
+      `email update ${escapeShellArg(email)} --quota ${escapeShellArg(quota)}`
+    );
+    debugLog(`Quota updated for account: ${email}`);
+    return { success: true, email, quota };
+  } catch (error) {
+    console.error('Error updating account quota:', error);
+    debugLog('Account quota update error:', error);
+    throw new Error('Unable to update email account quota');
+  }
+}
+
 // Function to delete an email account
 async function deleteAccount(email) {
   try {
@@ -568,6 +584,7 @@ module.exports = {
   getAccounts,
   addAccount,
   updateAccountPassword,
+  updateAccountQuota,
   deleteAccount,
   getAliases,
   addAlias,

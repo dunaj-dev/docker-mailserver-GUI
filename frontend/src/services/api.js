@@ -66,6 +66,16 @@ export const updateAccountPassword = async (email, password) => {
   }
 };
 
+export const updateAccountQuota = async (email, quota) => {
+  try {
+    const response = await api.put(`/accounts/${email}/quota`, { quota });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating account quota:', error);
+    throw error;
+  }
+};
+
 // API dla aliasów
 export const getAliases = async () => {
   try {

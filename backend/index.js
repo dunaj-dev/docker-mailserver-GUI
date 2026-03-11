@@ -200,6 +200,57 @@ app.put('/api/accounts/:email/password', async (req, res) => {
   }
 });
 
+// Endpoint for updating an email account quota
+/**
+ * @swagger
+ * /api/accounts/{email}/quota:
+ *   put:
+ *     summary: Update an email account quota
+ *     description: Update the storage quota for an existing email account
+ *     parameters:
+ *       - in: path
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Email address of the account to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               quota:
+ *                 type: string
+ *                 description: New quota value, for example 1024M or 2G
+ *     responses:
+ *       200:
+ *         description: Quota updated successfully
+ *       400:
+ *         description: Email and quota are required
+ *       500:
+ *         description: Unable to update quota
+ */
+app.put('/api/accounts/:email/quota', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { quota } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    if (!quota) {
+      return res.status(400).json({ error: 'Quota is required' });
+    }
+
+    await dockerMailserver.updateAccountQuota(email, quota);
+    res.json({ message: 'Quota updated successfully', email, quota });
+  } catch (error) {
+    res.status(500).json({ error: 'Unable to update quota' });
+  }
+});
+
 // Endpoint for retrieving aliases
 /**
  * @swagger
