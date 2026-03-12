@@ -3,6 +3,8 @@ const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
 // Docker container name for docker-mailserver
 const DOCKER_CONTAINER = process.env.DOCKER_CONTAINER || 'mailserver';
+const OPENDKIM_KEYS_PATH =
+  process.env.OPENDKIM_KEYS_PATH || '/tmp/docker-mailserver/opendkim/keys';
 
 // Debug flag
 const DEBUG = process.env.DEBUG_DOCKER === 'true';
@@ -32,6 +34,42 @@ function escapeShellArg(arg) {
   // Replace single quotes with '\'' (end quote, escaped quote, start quote)
   // Then wrap the entire string in single quotes
   return `'${arg.replace(/'/g, "'\\''")}'`;
+}
+
+/**
+ * Normalizes a domain to lowercase and trims surrounding whitespace.
+ * @param {string} domain - Domain candidate
+ * @return {string|null} Normalized domain or null if invalid
+ */
+function normalizeDomain(domain) {
+  if (!domain || typeof domain !== 'string') {
+    return null;
+  }
+
+  const normalized = domain.trim().toLowerCase();
+  if (!normalized || !/^[a-z0-9.-]+$/.test(normalized)) {
+    return null;
+  }
+
+  return normalized;
+}
+
+/**
+ * Extracts a domain from an email address.
+ * @param {string} email - Email address
+ * @return {string|null} Extracted domain or null when invalid
+ */
+function extractDomainFromEmail(email) {
+  if (!email || typeof email !== 'string') {
+    return null;
+  }
+
+  const parts = email.trim().split('@');
+  if (parts.length !== 2 || !parts[1]) {
+    return null;
+  }
+
+  return normalizeDomain(parts[1]);
 }
 
 /**
@@ -93,6 +131,184 @@ async function execSetup(setupCommand) {
   // The setup.sh script is usually located at /usr/local/bin/setup.sh or /usr/local/bin/setup in docker-mailserver
   debugLog(`Executing setup command: ${setupCommand}`);
   return execInContainer(`/usr/local/bin/setup ${setupCommand}`);
+}
+
+/**
+ * Reads immediate child directories in OPENDKIM keys path (domain folders).
+ * @return {Promise<string[]>} Domain names discovered from folder structure
+ */
+async function getDomainsFromOpendkimKeysPath() {
+  const escapedPath = escapeShellArg(OPENDKIM_KEYS_PATH);
+  const stdout = await execInContainer(
+    `if [ -d ${escapedPath} ]; then ls -1 ${escapedPath}; fi`
+  );
+
+  return stdout
+    .split('\n')
+    .map((line) => line.replace(/[\x00-\x1F\x7F-\x9F]/g, '').trim())
+    .filter((line) => line.length > 0)
+    .map((line) => normalizeDomain(line))
+    .filter(Boolean);
+}
+
+/**
+ * Parses OpenDKIM TXT file content and extracts DNS-ready fields.
+ * @param {string} rawDkimTxt - Raw content of mail.txt
+ * @return {{recordName: string, recordType: string, recordValue: string, raw: string}}
+ */
+function parseDkimTxt(rawDkimTxt) {
+  const cleanedRaw = rawDkimTxt
+    .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const nameMatch = cleanedRaw.match(/^([^\s]+)\s+IN\s+TXT/i);
+  const recordName = nameMatch ? nameMatch[1] : 'mail._domainkey';
+
+  const quotedParts = [...cleanedRaw.matchAll(/"([^"]+)"/g)].map(
+    (match) => match[1]
+  );
+  const recordValue = quotedParts.join('').replace(/\s+/g, ' ').trim();
+
+  return {
+    recordName,
+    recordType: 'TXT',
+    recordValue,
+    raw: cleanedRaw,
+  };
+}
+
+/**
+ * Reads DKIM TXT record from mail.txt for a specific domain.
+ * @param {string} domain - Domain name
+ * @return {Promise<{configured: boolean, selector: string, recordName: string|null, recordType: string, recordValue: string|null, raw: string|null}>}
+ */
+async function getDomainDkim(domain) {
+  const normalizedDomain = normalizeDomain(domain);
+  if (!normalizedDomain) {
+    return {
+      configured: false,
+      selector: 'mail',
+      recordName: null,
+      recordType: 'TXT',
+      recordValue: null,
+      raw: null,
+    };
+  }
+
+  const dkimFilePath = `${OPENDKIM_KEYS_PATH}/${normalizedDomain}/mail.txt`;
+  const escapedFilePath = escapeShellArg(dkimFilePath);
+  const stdout = await execInContainer(
+    `if [ -f ${escapedFilePath} ]; then cat ${escapedFilePath}; fi`
+  );
+
+  const rawDkimTxt = stdout.trim();
+  if (!rawDkimTxt) {
+    return {
+      configured: false,
+      selector: 'mail',
+      recordName: null,
+      recordType: 'TXT',
+      recordValue: null,
+      raw: null,
+    };
+  }
+
+  const parsed = parseDkimTxt(rawDkimTxt);
+  return {
+    configured: true,
+    selector: 'mail',
+    recordName: parsed.recordName,
+    recordType: parsed.recordType,
+    recordValue: parsed.recordValue,
+    raw: parsed.raw,
+  };
+}
+
+/**
+ * Returns domain overview with DKIM, SPF, and DMARC DNS data.
+ * @return {Promise<Array>} Domain overview list
+ */
+async function getDomainsOverview() {
+  try {
+    const [accounts, aliases, keyPathDomains] = await Promise.all([
+      getAccounts(),
+      getAliases(),
+      getDomainsFromOpendkimKeysPath(),
+    ]);
+
+    const domainsSet = new Set();
+
+    accounts.forEach((account) => {
+      const domain = extractDomainFromEmail(account.email);
+      if (domain) {
+        domainsSet.add(domain);
+      }
+    });
+
+    aliases.forEach((alias) => {
+      const sourceDomain = extractDomainFromEmail(alias.source);
+      const destinationDomain = extractDomainFromEmail(alias.destination);
+      if (sourceDomain) {
+        domainsSet.add(sourceDomain);
+      }
+      if (destinationDomain) {
+        domainsSet.add(destinationDomain);
+      }
+    });
+
+    keyPathDomains.forEach((domain) => domainsSet.add(domain));
+
+    const domains = Array.from(domainsSet).sort((a, b) => a.localeCompare(b));
+    const domainsWithDns = await Promise.all(
+      domains.map(async (domain) => {
+        const dkim = await getDomainDkim(domain);
+
+        return {
+          domain,
+          dkim,
+          spf: {
+            recordName: '@',
+            recordType: 'TXT',
+            recordValue: 'v=spf1 mx -all',
+            explanation:
+              'Allow mail delivery from this domain hosts (mx) and reject other senders.',
+          },
+          dmarc: {
+            recordName: `_dmarc.${domain}`,
+            recordType: 'TXT',
+            recordValue: `v=DMARC1; p=none; rua=mailto:postmaster@${domain}; fo=1; adkim=s; aspf=s`,
+            explanation:
+              'Start with p=none for monitoring, then tighten policy to quarantine or reject after validation.',
+          },
+        };
+      })
+    );
+
+    return domainsWithDns;
+  } catch (error) {
+    console.error('Error retrieving domains overview:', error);
+    debugLog('Domains overview error:', error);
+    throw new Error('Unable to retrieve domains overview');
+  }
+}
+
+/**
+ * Runs docker-mailserver DKIM configuration command.
+ * @return {Promise<{success: boolean, command: string}>}
+ */
+async function configureDkim() {
+  try {
+    await execSetup('config dkim');
+    return {
+      success: true,
+      command: 'setup config dkim',
+    };
+  } catch (error) {
+    console.error('Error configuring DKIM:', error);
+    debugLog('DKIM configuration error:', error);
+    throw new Error('Unable to configure DKIM');
+  }
 }
 
 // Function to retrieve email accounts
@@ -180,6 +396,22 @@ async function updateAccountPassword(email, password) {
     console.error('Error updating account password:', error);
     debugLog('Account password update error:', error);
     throw new Error('Unable to update email account password');
+  }
+}
+
+// Function to update an email account quota
+async function updateAccountQuota(email, quota) {
+  try {
+    debugLog(`Updating quota for account: ${email} -> ${quota}`);
+    await execSetup(
+      `quota set ${escapeShellArg(email)} ${escapeShellArg(quota)}`
+    );
+    debugLog(`Quota updated for account: ${email}`);
+    return { success: true, email, quota };
+  } catch (error) {
+    console.error('Error updating account quota:', error);
+    debugLog('Account quota update error:', error);
+    throw new Error('Unable to update email account quota');
   }
 }
 
@@ -352,9 +584,12 @@ module.exports = {
   getAccounts,
   addAccount,
   updateAccountPassword,
+  updateAccountQuota,
   deleteAccount,
   getAliases,
   addAlias,
   deleteAlias,
+  getDomainsOverview,
+  configureDkim,
   getServerStatus,
 };

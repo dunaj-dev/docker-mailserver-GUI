@@ -200,6 +200,62 @@ app.put('/api/accounts/:email/password', async (req, res) => {
   }
 });
 
+// Endpoint for updating an email account quota
+/**
+ * @swagger
+ * /api/accounts/{email}/quota:
+ *   put:
+ *     summary: Update an email account quota
+ *     description: Update the storage quota for an existing email account
+ *     parameters:
+ *       - in: path
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Email address of the account to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               quota:
+ *                 type: string
+ *                 description: New quota value, for example 1024M or 2G
+ *     responses:
+ *       200:
+ *         description: Quota updated successfully
+ *       400:
+ *         description: Email and quota are required
+ *       500:
+ *         description: Unable to update quota
+ */
+app.put('/api/accounts/:email/quota', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { quota } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    if (!quota) {
+      return res.status(400).json({ error: 'Quota is required' });
+    }
+    if (!/^\d+\s*[mMgG]$/.test(String(quota).trim())) {
+      return res
+        .status(400)
+        .json({ error: 'Quota must use MB or GB units, for example 500M or 2G' });
+    }
+
+    await dockerMailserver.updateAccountQuota(email, quota);
+    res.json({ message: 'Quota updated successfully', email, quota });
+  } catch (error) {
+    res.status(500).json({ error: 'Unable to update quota' });
+  }
+});
+
 // Endpoint for retrieving aliases
 /**
  * @swagger
@@ -309,6 +365,50 @@ app.delete('/api/aliases/:source/:destination', async (req, res) => {
     res.json({ message: 'Alias deleted successfully', source, destination });
   } catch (error) {
     res.status(500).json({ error: 'Unable to delete alias' });
+  }
+});
+
+// Endpoint for retrieving domains overview
+/**
+ * @swagger
+ * /api/domains:
+ *   get:
+ *     summary: Get domains overview
+ *     description: Retrieve all domains with DKIM/SPF/DMARC DNS guidance
+ *     responses:
+ *       200:
+ *         description: List of domains and DNS records
+ *       500:
+ *         description: Unable to retrieve domains overview
+ */
+app.get('/api/domains', async (req, res) => {
+  try {
+    const domains = await dockerMailserver.getDomainsOverview();
+    res.json(domains);
+  } catch (error) {
+    res.status(500).json({ error: 'Unable to retrieve domains overview' });
+  }
+});
+
+// Endpoint for generating DKIM keys
+/**
+ * @swagger
+ * /api/domains/dkim:
+ *   post:
+ *     summary: Configure DKIM
+ *     description: Run `setup config dkim` inside docker-mailserver container
+ *     responses:
+ *       200:
+ *         description: DKIM configuration command executed
+ *       500:
+ *         description: Unable to configure DKIM
+ */
+app.post('/api/domains/dkim', async (req, res) => {
+  try {
+    await dockerMailserver.configureDkim();
+    res.json({ message: 'DKIM configuration command executed successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Unable to configure DKIM' });
   }
 });
 

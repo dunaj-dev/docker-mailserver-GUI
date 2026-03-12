@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Accounts from './pages/Accounts';
 import Aliases from './pages/Aliases';
+import Domains from './pages/Domains';
 import Settings from './pages/Settings';
 import Container from 'react-bootstrap/Container'; // Import Container
 import Row from 'react-bootstrap/Row'; // Import Row
@@ -28,6 +29,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/aliases" element={<Aliases />} />
+              <Route path="/domains" element={<Domains />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>
           </Col>{' '}

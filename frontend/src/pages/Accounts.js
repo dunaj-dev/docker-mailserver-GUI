@@ -5,6 +5,7 @@ import {
   addAccount,
   deleteAccount,
   updateAccountPassword,
+  updateAccountQuota,
 } from '../services/api';
 import {
   AlertMessage,
@@ -19,6 +20,24 @@ import Row from 'react-bootstrap/Row'; // Import Row
 import Col from 'react-bootstrap/Col'; // Import Col
 import Modal from 'react-bootstrap/Modal'; // Import Modal
 import ProgressBar from 'react-bootstrap/ProgressBar'; // Import ProgressBar
+import Form from 'react-bootstrap/Form';
+
+const parseQuotaToForm = (quotaValue) => {
+  if (!quotaValue || quotaValue === 'unlimited') {
+    return { value: '', unit: 'GB' };
+  }
+
+  const match = quotaValue.trim().match(/^(\d+)\s*(m|mb|g|gb)$/i);
+  if (!match) {
+    return { value: '', unit: 'GB' };
+  }
+
+  const rawUnit = match[2].toUpperCase();
+  return {
+    value: match[1],
+    unit: rawUnit.startsWith('M') ? 'MB' : 'GB',
+  };
+};
 
 const Accounts = () => {
   const passwordFormRef = useRef(null);
@@ -42,6 +61,13 @@ const Accounts = () => {
     confirmPassword: '',
   });
   const [passwordFormErrors, setPasswordFormErrors] = useState({});
+  const [showQuotaModal, setShowQuotaModal] = useState(false);
+  const [quotaFormData, setQuotaFormData] = useState({
+    value: '',
+    unit: 'GB',
+  });
+  const [quotaFormErrors, setQuotaFormErrors] = useState({});
+  const [quotaUpdating, setQuotaUpdating] = useState(false);
 
   useEffect(() => {
     fetchAccounts();
@@ -154,6 +180,19 @@ const Accounts = () => {
     setSelectedAccount(null);
   };
 
+  const handleChangeQuota = (account) => {
+    setSelectedAccount(account);
+    setQuotaFormData(parseQuotaToForm(account?.storage?.total));
+    setQuotaFormErrors({});
+    setShowQuotaModal(true);
+  };
+
+  const handleCloseQuotaModal = () => {
+    setShowQuotaModal(false);
+    setSelectedAccount(null);
+    setQuotaFormErrors({});
+  };
+
   // Handle input changes for password change form
   const handlePasswordInputChange = (e) => {
     const { name, value } = e.target;
@@ -212,6 +251,65 @@ const Accounts = () => {
     }
   };
 
+  const handleQuotaInputChange = (e) => {
+    const { name, value } = e.target;
+    setQuotaFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    if (quotaFormErrors[name]) {
+      setQuotaFormErrors((prev) => ({
+        ...prev,
+        [name]: null,
+      }));
+    }
+  };
+
+  const validateQuotaForm = () => {
+    const errors = {};
+    const quotaValue = Number(quotaFormData.value);
+
+    if (!quotaFormData.value) {
+      errors.value = 'accounts.quotaRequired';
+    } else if (!Number.isFinite(quotaValue) || quotaValue <= 0) {
+      errors.value = 'accounts.invalidQuota';
+    }
+
+    if (!quotaFormData.unit || !['MB', 'GB'].includes(quotaFormData.unit)) {
+      errors.unit = 'accounts.invalidQuotaUnit';
+    }
+
+    setQuotaFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmitQuotaChange = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage('');
+
+    if (!selectedAccount || !validateQuotaForm()) {
+      return;
+    }
+
+    const unitSuffix = quotaFormData.unit === 'MB' ? 'M' : 'G';
+    const quotaValue = `${parseInt(quotaFormData.value, 10)}${unitSuffix}`;
+
+    try {
+      setQuotaUpdating(true);
+      await updateAccountQuota(selectedAccount.email, quotaValue);
+      setSuccessMessage('accounts.quotaUpdated');
+      handleCloseQuotaModal();
+      fetchAccounts();
+    } catch (err) {
+      console.error(t('api.errors.updateQuota'), err);
+      setError('api.errors.updateQuota');
+    } finally {
+      setQuotaUpdating(false);
+    }
+  };
+
   // Column definitions for accounts table
   const columns = [
     { key: 'email', label: 'accounts.email' },
@@ -220,17 +318,21 @@ const Accounts = () => {
       label: 'accounts.storage',
       render: (account) =>
         account.storage ? (
-          <div>
+          <button
+            type="button"
+            className="btn btn-link p-0 text-start text-decoration-none w-100"
+            title={t('accounts.editQuota')}
+            onClick={() => handleChangeQuota(account)}
+          >
             <div>
               {account.storage.used} / {account.storage.total}
             </div>
-            {/* Use ProgressBar component */}
             <ProgressBar
-              now={parseInt(account.storage.percent)}
+              now={parseInt(account.storage.percent, 10)}
               style={{ height: '5px' }}
               className="mt-1"
             />
-          </div>
+          </button>
         ) : (
           'N/A'
         ),
@@ -380,6 +482,64 @@ const Accounts = () => {
             variant="primary"
             onClick={handleSubmitPasswordChange}
             text="accounts.updatePassword"
+          />
+        </Modal.Footer>
+      </Modal>
+
+      <Modal show={showQuotaModal} onHide={handleCloseQuotaModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            {t('accounts.editQuota')} - {selectedAccount?.email}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedAccount && (
+            <form onSubmit={handleSubmitQuotaChange}>
+              <FormField
+                type="number"
+                id="quotaValue"
+                name="value"
+                label="accounts.quotaValue"
+                value={quotaFormData.value}
+                onChange={handleQuotaInputChange}
+                error={quotaFormErrors.value}
+                min="1"
+                step="1"
+                required
+              />
+
+              <Form.Group className="mb-3" controlId="quotaUnit">
+                <Form.Label>{t('accounts.quotaUnit')}</Form.Label>
+                <Form.Select
+                  name="unit"
+                  value={quotaFormData.unit}
+                  onChange={handleQuotaInputChange}
+                  isInvalid={!!quotaFormErrors.unit}
+                >
+                  <option value="MB">MB</option>
+                  <option value="GB">GB</option>
+                </Form.Select>
+                {quotaFormErrors.unit && (
+                  <Form.Control.Feedback type="invalid">
+                    {t(quotaFormErrors.unit)}
+                  </Form.Control.Feedback>
+                )}
+              </Form.Group>
+            </form>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={handleCloseQuotaModal}
+            text="common.cancel"
+            disabled={quotaUpdating}
+          />
+          <Button
+            variant="primary"
+            onClick={handleSubmitQuotaChange}
+            text="accounts.updateQuota"
+            disabled={quotaUpdating}
           />
         </Modal.Footer>
       </Modal>

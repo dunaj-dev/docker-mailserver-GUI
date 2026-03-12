@@ -66,6 +66,16 @@ export const updateAccountPassword = async (email, password) => {
   }
 };
 
+export const updateAccountQuota = async (email, quota) => {
+  try {
+    const response = await api.put(`/accounts/${email}/quota`, { quota });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating account quota:', error);
+    throw error;
+  }
+};
+
 // API dla aliasów
 export const getAliases = async () => {
   try {
@@ -93,6 +103,26 @@ export const deleteAlias = async (source, destination) => {
     return response.data;
   } catch (error) {
     console.error('Error deleting alias:', error);
+    throw error;
+  }
+};
+
+export const getDomains = async () => {
+  try {
+    const response = await api.get('/domains');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching domains overview:', error);
+    throw error;
+  }
+};
+
+export const configureDkim = async () => {
+  try {
+    const response = await api.post('/domains/dkim');
+    return response.data;
+  } catch (error) {
+    console.error('Error configuring DKIM:', error);
     throw error;
   }
 };
